@@ -1,0 +1,102 @@
+# Load necessary libraries
+library(dplyr)
+library(ggplot2)
+library(lubridate)
+library(readr)
+
+# Data Preparation
+# Simulate the creation of a DataFrame with ride data
+set.seed(42)  # For reproducibility
+data <- data.frame(
+  ride_duration_minutes = rnorm(1000, mean = 20, sd = 5),  # Normally distributed ride durations
+  ride_distance_miles = runif(1000, min = 1, max = 10),    # Uniformly distributed ride distances
+  ride_rating = sample(1:5, 1000, replace = TRUE)          # Random ride ratings between 1 and 5
+)
+
+# Introduce missing values and outliers for demonstration
+data$ride_duration_minutes[1:10] <- NA  # Introduce NaN values
+data$ride_distance_miles[101:110] <- NA
+data$ride_rating[201:210] <- NA
+data$ride_duration_minutes[21:30] <- data$ride_duration_minutes[21:30] * 3  # Unrealistic ride durations
+data$ride_distance_miles[41:50] <- data$ride_distance_miles[41:50] * 4  # Unrealistic ride distances
+data$ride_rating[61:70] <- 10  # Invalid ride ratings
+
+# Data Cleaning
+# Handling missing values
+data$ride_duration_minutes[is.na(data$ride_duration_minutes)] <- median(data$ride_duration_minutes, na.rm = TRUE)
+data$ride_distance_miles[is.na(data$ride_distance_miles)] <- median(data$ride_distance_miles, na.rm = TRUE)
+data$ride_rating[is.na(data$ride_rating)] <- median(data$ride_rating, na.rm = TRUE)
+
+# Handling outliers
+data$ride_duration_minutes <- ifelse(data$ride_duration_minutes > quantile(data$ride_duration_minutes, 0.99), 
+                                     quantile(data$ride_duration_minutes, 0.99), 
+                                     data$ride_duration_minutes)
+data$ride_distance_miles <- ifelse(data$ride_distance_miles > quantile(data$ride_distance_miles, 0.99), 
+                                   quantile(data$ride_distance_miles, 0.99), 
+                                   data$ride_distance_miles)
+data$ride_rating <- ifelse(data$ride_rating < 1 | data$ride_rating > 5, 5, data$ride_rating)
+
+# Descriptive Statistics
+summary_statistics <- data %>%
+  summarise(
+    mean_duration = mean(ride_duration_minutes),
+    median_duration = median(ride_duration_minutes),
+    mode_duration = as.numeric(names(sort(table(ride_duration_minutes), decreasing = TRUE)[1])),
+    sd_duration = sd(ride_duration_minutes),
+    mean_distance = mean(ride_distance_miles),
+    median_distance = median(ride_distance_miles),
+    mode_distance = as.numeric(names(sort(table(ride_distance_miles), decreasing = TRUE)[1])),
+    sd_distance = sd(ride_distance_miles),
+    mean_rating = mean(ride_rating),
+    median_rating = median(ride_rating),
+    mode_rating = as.numeric(names(sort(table(ride_rating), decreasing = TRUE)[1])),
+    sd_rating = sd(ride_rating)
+  )
+
+print(summary_statistics)
+
+# Data Visualization
+# Histogram of Ride Durations
+ggplot(data, aes(x = ride_duration_minutes)) +
+  geom_histogram(binwidth = 1, fill = 'blue', color = 'black', alpha = 0.7) +
+  labs(title = "Histogram of Ride Durations", x = "Duration in Minutes", y = "Frequency") +
+  theme_minimal()
+
+# Histogram of Ride Distances
+ggplot(data, aes(x = ride_distance_miles)) +
+  geom_histogram(binwidth = 1, fill = 'green', color = 'black', alpha = 0.7) +
+  labs(title = "Histogram of Ride Distances", x = "Distance in Miles", y = "Frequency") +
+  theme_minimal()
+
+# Scatter Plot of Ride Duration vs. Ride Distance
+ggplot(data, aes(x = ride_duration_minutes, y = ride_distance_miles, color = factor(ride_rating))) +
+  geom_point(alpha = 0.7) +
+  labs(title = "Scatter Plot of Ride Duration vs. Ride Distance", 
+       x = "Ride Duration (minutes)", y = "Ride Distance (miles)", color = "Ride Rating") +
+  theme_minimal()
+
+# Specific Analyses
+# Simulating start station data
+data$start_station <- sample(c('Station A', 'Station B', 'Station C', 'Station D', 'Station E'), 1000, replace = TRUE)
+
+# Finding the most popular start stations
+popular_stations <- data %>%
+  count(start_station, sort = TRUE)
+
+print(popular_stations)
+
+# Finding the longest trip durations
+data$trip_duration_hours <- data$ride_duration_minutes / 60
+longest_trips <- data %>%
+  arrange(desc(trip_duration_hours)) %>%
+  head(5) %>%
+  select(start_station, trip_duration_hours, ride_distance_miles, ride_rating)
+
+print(longest_trips)
+
+# Time Series Plot of Ride Durations Over Time
+data$date <- seq.Date(from = as.Date("2023-01-01"), by = "day", length.out = 1000)
+ggplot(data, aes(x = date, y = ride_duration_minutes)) +
+  geom_line(color = 'blue', alpha = 0.7) +
+  labs(title = "Time Series Plot of Ride Durations Over Time", x = "Date", y = "Ride Duration (minutes)") +
+  theme_minimal()

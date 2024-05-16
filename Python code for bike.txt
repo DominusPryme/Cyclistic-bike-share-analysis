@@ -1,0 +1,98 @@
+# Import necessary libraries
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Setting the visual style for plots
+sns.set(style="whitegrid")
+
+# Data Preparation
+# Simulating the creation of a DataFrame with ride data
+np.random.seed(42)  # For reproducibility
+data = pd.DataFrame({
+    "ride_duration_minutes": np.random.normal(loc=20, scale=5, size=1000),  # Normally distributed ride durations
+    "ride_distance_miles": np.random.uniform(low=1, high=10, size=1000),    # Uniformly distributed ride distances
+    "ride_rating": np.random.randint(low=1, high=6, size=1000)              # Random ride ratings between 1 and 5
+})
+
+# Introduce missing values and outliers for demonstration
+data.loc[0:10, 'ride_duration_minutes'] = np.nan  # Introduce NaN values
+data.loc[100:110, 'ride_distance_miles'] = np.nan
+data.loc[200:210, 'ride_rating'] = np.nan
+data.loc[20:30, 'ride_duration_minutes'] *= 3  # Unrealistic ride durations
+data.loc[40:50, 'ride_distance_miles'] *= 4  # Unrealistic ride distances
+data.loc[60:70, 'ride_rating'] = 10  # Invalid ride ratings
+
+# Data Cleaning
+# Handling missing values
+data['ride_duration_minutes'].fillna(data['ride_duration_minutes'].median(), inplace=True)
+data['ride_distance_miles'].fillna(data['ride_distance_miles'].median(), inplace=True)
+data['ride_rating'].fillna(data['ride_rating'].median(), inplace=True)
+
+# Handling outliers
+data['ride_duration_minutes'] = data['ride_duration_minutes'].clip(upper=data['ride_duration_minutes'].quantile(0.99))
+data['ride_distance_miles'] = data['ride_distance_miles'].clip(upper=data['ride_distance_miles'].quantile(0.99))
+data['ride_rating'] = data['ride_rating'].clip(lower=1, upper=5)
+
+# Descriptive Statistics
+summary_statistics = data.describe()
+mode_data = data.mode().loc[0]  # Getting the mode for each column, taking the first mode if multiple
+summary_statistics.loc['mode'] = mode_data
+
+# Print summary statistics
+print("Summary Statistics:\\n", summary_statistics)
+
+# Data Visualization
+# Histogram of Ride Durations
+plt.figure(figsize=(10, 6))
+sns.histplot(data['ride_duration_minutes'], bins=30, kde=True, color='blue')
+plt.title('Histogram of Ride Durations')
+plt.xlabel('Duration in Minutes')
+plt.ylabel('Frequency')
+plt.savefig("Case_Study_Histogram_of_Ride_Durations.png")
+plt.show()
+
+# Histogram of Ride Distances
+plt.figure(figsize=(10, 6))
+sns.histplot(data['ride_distance_miles'], bins=30, kde=True, color='green')
+plt.title('Histogram of Ride Distances')
+plt.xlabel('Distance in Miles')
+plt.ylabel('Frequency')
+plt.savefig("Case_Study_Histogram_of_Ride_Distances.png")
+plt.show()
+
+# Scatter Plot of Ride Duration vs. Ride Distance
+plt.figure(figsize=(10, 6))
+sns.scatterplot(x='ride_duration_minutes', y='ride_distance_miles', data=data, hue='ride_rating', palette='coolwarm', s=100)
+plt.title('Scatter Plot of Ride Duration vs. Ride Distance')
+plt.xlabel('Ride Duration (minutes)')
+plt.ylabel('Ride Distance (miles)')
+plt.legend(title='Ride Rating')
+plt.savefig("Case_Study_Scatter_Plot_Duration_vs_Distance.png")
+plt.show()
+
+# Specific Analyses
+# Simulating start station data
+data['start_station'] = np.random.choice(['Station A', 'Station B', 'Station C', 'Station D', 'Station E'], size=len(data))
+
+# Finding the most popular start stations
+popular_stations = data['start_station'].value_counts().rename_axis('Station').reset_index(name='Counts')
+
+# Finding the longest trip durations
+data['trip_duration_hours'] = data['ride_duration_minutes'] / 60
+longest_trips = data.nlargest(5, 'trip_duration_hours')[['start_station', 'trip_duration_hours', 'ride_distance_miles', 'ride_rating']]
+
+# Print popular stations and longest trips
+print("\\nMost Popular Start Stations:\\n", popular_stations)
+print("\\nLongest Trip Durations:\\n", longest_trips)
+
+# Time Series Plot of Ride Durations Over Time
+data['date'] = pd.date_range(start="2023-01-01", periods=len(data), freq='D')
+plt.figure(figsize=(12, 6))
+data.set_index('date')['ride_duration_minutes'].plot()
+plt.title('Time Series Plot of Ride Durations Over Time')
+plt.xlabel('Date')
+plt.ylabel('Ride Duration (minutes)')
+plt.savefig("Case_Study_Time_Series_Ride_Durations.png")
+plt.show()
